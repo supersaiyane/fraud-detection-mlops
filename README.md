@@ -72,11 +72,26 @@ A **real-time fraud detection platform** that leverages AWS services for:
 ---
 
 ## 🛠️ Strategy
+
 1. **Multi-tenant ready**: Isolated Studio domains, per-tenant S3 buckets.  
 2. **Governed datasets**: Amazon DataZone integration.  
 3. **CI/CD integration**: CodePipeline + CodeBuild + CodeDeploy.  
 4. **Guardrails**: Latency/error budget monitoring, rollback, retraining.  
 5. **Cost Optimization**: Spot training, serverless inference, multi-model endpoints.  
+6. **Security Compliance**: OPA/Conftest in CodeBuild, WAF on API Gateway.  
+
+---
+
+## 🏗️ Architecture Decisions
+
+- **Fraud API** uses **API Gateway + Lambda + SageMaker Endpoint**.  
+- **Redis Caching (ElastiCache)** integrated into Fraud Lambda for sub-ms lookups.  
+- **Suspicious Transactions** stored in DynamoDB for analyst review.  
+- **Logs** pushed to S3 with **Glacier lifecycle policies** (30 → 90 days → 7 years).  
+- **Rollback Lambda** with CloudWatch alarms + 30-day log retention.  
+- **FinOps Guardrails**: AWS Budgets + Anomaly Detection alerts.  
+- **CI/CD** includes **Test Stage** (unit + integration tests) before Sandbox deployment.  
+- **QuickSight dashboards** provide business analytics (manual setup required).  
 
 ---
 
