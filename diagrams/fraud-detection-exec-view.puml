@@ -1,0 +1,40 @@
+@startuml
+title Executive View - AI-Ready Fraud Detection Platform
+
+actor "Customers" as Customer
+actor "Data Scientists" as DS
+actor "Executives / Compliance" as Execs
+
+participant "Governed Datasets\n(Amazon DataZone + S3)" as DataZone
+participant "SageMaker Training\n(Spot Instances)" as Training
+participant "Model Registry\n(Versioned & Approved)" as Registry
+participant "CI/CD Pipeline\n(CodePipeline + CodeBuild)" as CICD
+participant "Fraud API\n(API Gateway + Lambda)" as API
+participant "SageMaker Endpoint\n(Canary → Prod)" as Endpoint
+participant "Monitoring & Guardrails\n(CloudWatch, Drift, Error Budgets)" as Guardrails
+participant "Rollback Automation\n(Auto-Fix Lambda)" as Rollback
+participant "Business Dashboard\n(QuickSight + CloudWatch)" as Dashboard
+
+== Data Science Flow ==
+DS -> DataZone : Request & prepare governed datasets
+DataZone -> Training : Train fraud detection models
+Training -> Registry : Register model version
+Registry -> CICD : CI/CD approves & promotes model
+
+== Deployment ==
+CICD -> Endpoint : Deploy with Canary strategy
+Endpoint -> API : Expose fraud-check API
+
+== Customer Experience ==
+Customer -> API : Transaction check
+API -> Customer : Fast fraud decision (Approve/Review/Decline)
+
+== Reliability Guardrails ==
+Endpoint -> Guardrails : Metrics (latency, errors, drift)
+Guardrails -> Rollback : Auto-rollback if SLOs breached
+Rollback -> Dashboard : Update rollback events
+
+== Business Visibility ==
+Execs -> Dashboard : Compliance, Trends, KPIs
+
+@enduml

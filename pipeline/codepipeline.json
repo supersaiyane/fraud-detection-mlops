@@ -1,0 +1,7 @@
+{
+  "Version": "1.0",
+  "Pipeline": {
+    "Name": "fraud-detection-pipeline",
+    "RoleArn": "arn:aws:iam::123456789012:role/CodePipelineRole"
+  }
+}

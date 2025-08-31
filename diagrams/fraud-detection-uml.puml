@@ -1,0 +1,67 @@
+@startuml
+title Real-Time Fraud Detection with Guardrails + Auto-Rollback + Dashboards
+
+actor Customer
+actor DataScientist
+actor "Fraud Review Team" as FraudTeam
+actor "Slack/Teams Channels" as Notifiers
+
+participant "Payment App" as App
+participant "Fraud API\n(API GW + Lambda)" as API
+participant "SageMaker Endpoint\n(Canary + Prod Variants)" as Endpoint
+database "DynamoDB\nSuspicious Txns" as FraudDB
+database "S3\nTransaction Logs" as S3
+database "S3 Glacier\nArchive Logs" as Glacier
+participant "ElastiCache\nFraud Cache" as Cache
+
+participant "SageMaker Training\n(Spot Instances)" as Train
+participant "SageMaker Model Registry" as Registry
+participant "AWS CodePipeline\n+ CodeBuild" as Pipeline
+participant "Monitoring & Guardrails\n(CloudWatch, Model Monitor)" as Guardrails
+participant "Rollback Lambda\n(Auto-fix)" as RollbackLambda
+database "DynamoDB\nRollback Logs" as RollbackDB
+participant "Kinesis Firehose\n(Log Streaming)" as Firehose
+database "S3\nRollback Archive" as RollbackArchive
+participant "QuickSight\nRollback Dashboard" as Dashboard
+
+== Transaction Flow ==
+Customer -> App : Initiates Transaction
+App -> API : POST /fraud-check
+API -> Endpoint : Invoke fraud model
+Endpoint -> API : Return fraud score
+API -> App : Decision (LEGIT / REVIEW / SUSPICIOUS)
+
+alt Decision = LEGIT
+    App -> S3 : Log transaction
+    App -> Customer : Payment Approved
+else Decision = REVIEW
+    App -> Customer : MFA/OTP
+    Customer -> App : Provide OTP
+    App -> S3 : Log transaction
+else Decision = SUSPICIOUS
+    API -> FraudDB : Save suspicious txn
+    API -> S3 : Log transaction
+    FraudTeam -> FraudDB : Investigate
+end
+
+== Model Lifecycle ==
+DataScientist -> Train : Train fraud model (XGBoost/DeepLearning)
+Train -> Registry : Register new model
+Registry -> Pipeline : Trigger CI/CD
+Pipeline -> Endpoint : Deploy Canary (10%)
+
+== Guardrails ==
+Endpoint -> Guardrails : Metrics (latency, errors, drift)
+Guardrails -> RollbackLambda : Alarm if breach (SNS)
+
+== Auto-Rollback ==
+RollbackLambda -> Endpoint : Update config (Prod=100%, Canary=0)
+RollbackLambda -> RollbackDB : Log rollback event
+RollbackLambda -> Notifiers : Send Slack/Teams alert
+
+== Analytics ==
+RollbackDB -> Firehose : Stream rollback logs
+Firehose -> RollbackArchive : Store logs in S3
+RollbackArchive -> Dashboard : QuickSight visualization
+Guardrails -> Dashboard : Show live CloudWatch metrics
+@enduml
